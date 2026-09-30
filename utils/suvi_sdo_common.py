@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from astropy.io import fits
+from scipy.ndimage import gaussian_filter
 
 logger = logging.getLogger(__name__)
 
@@ -134,24 +135,35 @@ def timestamp_to_seconds(timestamp_str: str) -> float:
     return pd.Timestamp(timestamp_str).timestamp()
 
 
-def normalize_for_display(img: np.ndarray) -> np.ndarray:
-    """Log-scale and percentile-normalize an image array to uint8 for display.
+def normalize_for_display(img: np.ndarray, smooth_sigma: float = 1.0) -> np.ndarray:
+    """Percentile-normalize an image array to uint8 for display.
 
-    Matches the notebook's normalizar_debug: clip non-positive values, take
-    log10, then linearly rescale the 2nd-98th percentile range to [0, 255].
+    A light Gaussian blur (smooth_sigma) is applied before stretching, since
+    both AIA and (especially) SUVI L2 frames carry real pixel-level shot
+    noise comparable in magnitude to the underlying signal at native
+    resolution -- unsmoothed, a percentile stretch amplifies that noise
+    rather than the solar structure it's meant to reveal.
+
+    Does NOT take a log: AIA counts are large and positive, but SUVI L2 data
+    is calibrated radiance (W m-2 sr-1) that can be small or negative after
+    background subtraction, for which log10 is undefined/misleading. A
+    straight percentile-based linear stretch works for both without special
+    -casing either instrument.
 
     Args:
         img: 2D array of raw pixel values (any numeric dtype).
+        smooth_sigma: Gaussian blur sigma, in pixels, applied before the
+            percentile stretch. 0 disables smoothing.
 
     Returns:
         A uint8 array of the same shape, in [0, 255].
     """
-    img = np.asarray(img, dtype=np.float32).copy()
-    img[img <= 0] = 1
-    img_log = np.log10(img)
-    vmin = np.nanpercentile(img_log, 2)
-    vmax = np.nanpercentile(img_log, 98)
-    img_norm = (img_log - vmin) / (vmax - vmin + 1e-10)
+    img = np.asarray(img, dtype=np.float32)
+    if smooth_sigma > 0:
+        img = gaussian_filter(img, sigma=smooth_sigma)
+    vmin = np.nanpercentile(img, 1)
+    vmax = np.nanpercentile(img, 99)
+    img_norm = (img - vmin) / (vmax - vmin + 1e-10)
     img_norm = np.clip(img_norm, 0, 1) * 255
     return img_norm.astype(np.uint8)
 

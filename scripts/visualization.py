@@ -249,7 +249,7 @@ def render_pair_plot(
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 6), gridspec_kw={"wspace": 0}, sharey=True)
     for ax, img, label in ((axes[0], suvi_img, f"SUVI  {suvi_entry['timestamp']}"), (axes[1], aia_img, f"AIA  {aia_entry['timestamp']}")):
-        ax.imshow(np.log10(np.clip(img.astype(np.float32), 1, None)), cmap="turbo")
+        ax.imshow(normalize_for_display(img), cmap="turbo")
         ax.set_xticks([])
         ax.set_yticks([])
         mpl_label_box(ax, label, loc="upper left")
