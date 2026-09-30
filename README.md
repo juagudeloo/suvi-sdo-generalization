@@ -22,14 +22,14 @@ python scripts/suvi_sdo_query.py --start 2023-03-15T09:00:00 --end 2023-03-15T15
 # export is ~2 min/file serial, and the servers are flaky under load)
 python scripts/suvi_sdo_query.py --start 2023-03-15T09:00:00 --end 2023-03-15T15:00:00 \
     --mode quiet-sun --duration 1h --all-sdo-channels --match-suvi --download \
-    --jsoc-email tu_email@registrado.com
+    --jsoc-email your_registered_email@example.com
 ```
 
 Long downloads should go through SLURM instead of an interactive session (AIA exports can take
-hours): `sbatch tools/download.sh <mismos flags>`. Full flag reference, retry/resume behavior, and
+hours): `sbatch tools/download.sh <same flags>`. Full flag reference, retry/resume behavior, and
 worked examples: **[`docs/suvi_sdo_query_usage.md`](docs/suvi_sdo_query_usage.md)**.
 
-**Visualizar una descarga ya hecha** (par SUVI/AIA lado a lado, o un video interleaved):
+**Visualizing an existing download** (SUVI/AIA pair side by side, or an interleaved video):
 
 ```bash
 FOLDER=data/matched/quiet-sun_20230315T090000_20230315T150000
@@ -40,32 +40,29 @@ python scripts/visualization.py --folder $FOLDER \
 python scripts/visualization.py --folder $FOLDER video --channel 304
 ```
 
-Corridos de verdad sobre los datos que ya están en este repo. El panel de AIA sale nítido; el de
-SUVI sale granulado incluso después de arreglar la normalización (ver commit `2cf9082`) —
-confirmado en los 6 canales SUVI descargados, no es un archivo puntual dañado ni un bug de lectura
-(se verificó con `astropy` y `sunpy.map.Map` por separado, mismos valores). Puede ser una
-característica real de este producto NCEI "dr" (`BUNIT: W m-2 sr-1`, marcado como *experimental* en
-su propia cabecera FITS) en condiciones de quiet-sun — vale la pena preguntarle al colaborador de
-SUVI si esto es esperado antes de asumir nada más. Referencia completa:
-**[`docs/visualization_usage.md`](docs/visualization_usage.md)**.
+Actually run against the data already in this repo. The AIA panel comes out sharp; the SUVI panel
+comes out grainy even after fixing the normalization (see commit `2cf9082`) — confirmed across all
+6 downloaded SUVI channels, not a one-off corrupt file or a reading bug (checked independently with
+`astropy` and `sunpy.map.Map`, same values both ways). This may be a real characteristic of this
+NCEI "dr" product (`BUNIT: W m-2 sr-1`, its own FITS header marks it *experimental*) under quiet-sun
+conditions — worth asking the SUVI collaborator whether this is expected before assuming anything
+else. Full reference: **[`docs/visualization_usage.md`](docs/visualization_usage.md)**.
 
 ## Contents
 
-| Path | Qué es |
+| Path | What it is |
 |---|---|
-| [`scripts/suvi_sdo_query.py`](scripts/suvi_sdo_query.py) | Herramienta principal. Busca y descarga SUVI + SDO (AIA/HMI) emparejados para una ventana de tiempo, en modo `quiet-sun`, `flare-event`, o `indistinct`. Sin `--download` solo lista disponibilidad. Escribe un `manifest.json` por descarga (qué se pidió, qué se verificó en disco, `status: complete/incomplete`) que permite reanudar con `--resume` sin recordar el comando original. |
-| [`scripts/visualization.py`](scripts/visualization.py) | Grafica o anima pares SUVI/AIA a partir de una carpeta ya descargada, leyendo el `manifest.json` (nunca vuelve a consultar HEK). Ver [`docs/visualization_usage.md`](docs/visualization_usage.md). |
-| [`utils/suvi_sdo_common.py`](utils/suvi_sdo_common.py) | Helpers compartidos por los dos scripts de arriba: mapeo de canales, timestamps FITS, nombres de carpeta/archivo, lectura/escritura del manifest. |
-| [`tools/download.sh`](tools/download.sh) | Lanza `suvi_sdo_query.py --download` como job de SLURM (nodo `maxwell`, partición `gpu.cecc`, sin GPU). Recibe los mismos flags que el script, tal cual. |
-| [`docs/suvi_channel_mapping_preprocessing.md`](docs/suvi_channel_mapping_preprocessing.md) | Qué canales de Surya tienen equivalente en SUVI, comparación de resolución, y qué preprocesamiento haría falta antes de pasar datos SUVI por el encoder. |
-| [`notebook/01-download_sdo_and_suvi.ipynb`](notebook/01-download_sdo_and_suvi.ipynb) | Notebook exploratorio original (un solo canal, un solo evento) — reemplazado en la práctica por `suvi_sdo_query.py`, se conserva como referencia. |
+| [`scripts/suvi_sdo_query.py`](scripts/suvi_sdo_query.py) | Main tool. Searches and downloads matched SUVI + SDO (AIA/HMI) observations for a time window, in `quiet-sun`, `flare-event`, or `indistinct` mode. Without `--download` it only lists availability. Writes a `manifest.json` per download (what was requested, what was verified on disk, `status: complete/incomplete`) that allows resuming with `--resume` without remembering the original command. |
+| [`scripts/visualization.py`](scripts/visualization.py) | Plots or animates SUVI/AIA pairs from an already-downloaded folder, reading `manifest.json` (never re-queries HEK). See [`docs/visualization_usage.md`](docs/visualization_usage.md). |
+| [`utils/suvi_sdo_common.py`](utils/suvi_sdo_common.py) | Helpers shared by the two scripts above: channel mapping, FITS timestamps, folder/file naming, manifest read/write. |
+| [`tools/download.sh`](tools/download.sh) | Launches `suvi_sdo_query.py --download` as a SLURM job (node `maxwell`, partition `gpu.cecc`, no GPU). Takes the same flags as the script, as-is. |
+| [`docs/suvi_channel_mapping_preprocessing.md`](docs/suvi_channel_mapping_preprocessing.md) | Which Surya channels have a SUVI equivalent, a resolution comparison, and what preprocessing would be needed before feeding SUVI data through the encoder. |
+| [`notebook/01-download_sdo_and_suvi.ipynb`](notebook/01-download_sdo_and_suvi.ipynb) | Original exploratory notebook (single channel, single event) — superseded in practice by `suvi_sdo_query.py`, kept for reference. |
 
-`data/` y `logs/` están en `.gitignore` — los datos descargados y los logs de SLURM no viven en el
-repo.
+`data/` and `logs/` are in `.gitignore` — downloaded data and SLURM logs don't live in the repo.
 
-## Estado actual
+## Current status
 
-Herramienta de descarga funcional y verificada (reintentos, reanudación, reporte honesto de estado
-incompleto). **No hecho todavía:** correr el encoder de Surya sobre datos SUVI mapeados — todo lo
-que hay hasta ahora es descarga y análisis de factibilidad, no el experimento de generalización en
-sí.
+Download tool functional and verified (retries, resume, honest incomplete-status reporting).
+**Not done yet:** running Surya's encoder on mapped SUVI data — everything so far is download and
+feasibility analysis, not the generalization experiment itself.
