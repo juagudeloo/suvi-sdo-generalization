@@ -43,10 +43,11 @@ python scripts/visualization.py --folder $FOLDER video --channel 304
 Actually run against the data already in this repo. The AIA panel comes out sharp; the SUVI panel
 comes out grainy even after fixing the normalization (see commit `2cf9082`) — confirmed across all
 6 downloaded SUVI channels, not a one-off corrupt file or a reading bug (checked independently with
-`astropy` and `sunpy.map.Map`, same values both ways). This may be a real characteristic of this
-NCEI "dr" product (`BUNIT: W m-2 sr-1`, its own FITS header marks it *experimental*) under quiet-sun
-conditions — worth asking the SUVI collaborator whether this is expected before assuming anything
-else. Full reference: **[`docs/visualization_usage.md`](docs/visualization_usage.md)**.
+`astropy` and `sunpy.map.Map`, same values both ways). **Confirmed abnormal by the SUVI
+collaborator (30 Sep 2026)** — this is not expected SUVI behavior. Frames this noisy can't be
+processed by Surya; a quality filter to detect and exclude them is needed before the generalization
+test can run for real (see `docs/suvi_channel_mapping_preprocessing.md` and the Notion task tracking
+this). Full reference: **[`docs/visualization_usage.md`](docs/visualization_usage.md)**.
 
 ## Contents
 
